@@ -28,9 +28,11 @@ current_directory = str(os.getcwd())
 file_list = os.listdir(current_directory)
 
 pslips = []
+nf_names = []
 failed_to_parse = []
 months_processed = 0 
-emp_id = input('Please enter emp id : ')
+emp_id = '101285221'
+#emp_id = input('Please enter emp id : ')
 years = []
 
 for file_name in file_list:
@@ -60,6 +62,8 @@ for year in years:
             df2 = None
             df3 = None
             df4 = None
+            nf = None
+
 
 
 
@@ -102,11 +106,19 @@ for year in years:
 
             pslips.append(final_df_final)
             
+            nf = table[0]
+            nf_columns = list(nf.columns.values)
+
+            nf = nf.assign(Month_name  = month , Year_name = year )
+            nf_names.append(nf)
+
+
             df = None
             df1 = None
             df2 = None
             df3 = None
             df4 = None
+            nf = None
 
             months_processed = months_processed + 1
             print('Successfully scraped !!' )
@@ -137,7 +149,7 @@ ct = ct.replace(':','_')
 ct = ct.replace('.','_')
 
 
-all_in_one_excel_path = current_directory + '\payslips_scraped_all_cuts' + '_' + emp_id  + '_' + ct + '.xlsx'
+all_in_one_excel_path = current_directory + '\payslips_scraped_all_cuts' + '_' + emp_id  + '_' + nf_columns[3] + '_' + ct + '.xlsx'
 
 result_raw = pd.concat(pslips)
 result_raw['Amount'] = result_raw['Amount'].str.replace(',','')
@@ -147,7 +159,23 @@ try:
     result_raw['Amount'] = pd.to_numeric(result_raw['Amount'])
 except Exception as e:
     print('\n Failed to convert Amount to numeric :' + str(e))
+
 result = result_raw[~result_raw['Category'].isin(['NET PAY' , 'GROSS EARNING' , 'GROSS DEDUCTIONS'])]
+
+final_nf_raw=pd.concat(nf_names)
+final_nf_raw.rename( columns={nf_columns[0]:'Col1' , nf_columns[1]:'Col2' , nf_columns[2]:'Col3' , nf_columns[3]:'Col4'  }, inplace=True )
+
+nf1 = final_nf_raw.loc[:,('Col1', 'Col2', 'Month_name' , 'Year_name')]
+nf1.rename( columns={'Col1':'Category' , 'Col2':'Details'}, inplace=True )
+nf2 = final_nf_raw.loc[:,('Col3', 'Col4', 'Month_name' , 'Year_name')]
+nf2.rename( columns={'Col3':'Category' , 'Col4':'Details'}, inplace=True )
+
+nf_concat_list = []
+nf_concat_list.append(nf1)
+nf_concat_list.append(nf2)
+
+nf_concat = pd.concat(nf_concat_list)
+nf_concat = nf_concat.sort_values(by=['Year_name', 'Month_name'])
 
 
 writer = pd.ExcelWriter(all_in_one_excel_path, engine='xlsxwriter')
@@ -156,9 +184,13 @@ result.to_excel(writer, sheet_name='Raw Data')
 result.groupby([ 'Year_name', 'Month_name', 'Type', 'Category' ])['Amount'].sum().to_excel(writer, sheet_name='Grouped Raw Data')
 result.groupby(['Type', 'Category' ])['Amount'].sum().to_excel(writer, sheet_name='Category Aggregated Data')
 result.groupby(['Type'])['Amount'].sum().to_excel(writer, sheet_name='Type Aggregated Data')
+nf_concat.to_excel(writer, sheet_name='Payslip details')
 
 writer.close()
 
 print('\nAll sheets combined in Excel data stored at : ' + all_in_one_excel_path )
 
 print('\n-----------DONE--------------\n')
+
+
+
