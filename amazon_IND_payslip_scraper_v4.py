@@ -31,8 +31,7 @@ pslips = []
 nf_names = []
 failed_to_parse = []
 months_processed = 0 
-emp_id = '101285221'
-#emp_id = input('Please enter emp id : ')
+emp_id = input('Please enter emp id : ')
 years = []
 
 for file_name in file_list:
